@@ -5,6 +5,8 @@ const accountSid   = process.env.accountSid
 const authToken    = process.env.authToken
 const client = require('twilio')(accountSid, authToken);
 
+console.log("Twilio -> ", accountSid, authToken);
+console.log("Client -> ", client);
 
 function sendTextMessageWhatsapp(phone, message) {
     return new Promise((resolve, reject) => {
