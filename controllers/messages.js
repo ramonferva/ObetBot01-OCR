@@ -275,12 +275,12 @@ const messageInfo = async (req, res) => {
           eventName: 'EVENTO_TRANSFERENCIA_CLAUDE', // Nombre dinámico del evento en Dialogflow
           contextName: "reportar_transferencia", // Nombre que usará Dialogflow en su consola
           parameters: {
-            banco: ocr.banco,
-            cuenta: ocr.cuenta,
-            referencia: ocr.referencia,
-            fecha: ocr.fecha,
-            monto: ocr.monto,
-            documento: ocr.documento,
+            banco: ocr.datos.banco,
+            cuenta: ocr.datos.cuenta,
+            referencia: ocr.datos.referencia,
+            fecha: ocr.datos.fecha,
+            monto: ocr.datos.monto,
+            documento: ocr.datos.documento,
           },
         };
 
