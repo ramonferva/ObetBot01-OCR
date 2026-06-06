@@ -33,7 +33,7 @@ const formatedObject = (obj) => {
   return obj;
 };
 
-const dialogflowProccess = async (message, phoneNumber, messageId, contextoPersonalizado = null) => {
+const dialogflowProccess = async (message, phoneNumber, messageId, configuracionDinamica = null) => {
   console.log("dialogflow ----> ", message);
   try {
     //const redis = await Redis();
