@@ -209,9 +209,9 @@ const messageInfo = async (req, res) => {
   const phoneNumber = normalizePhone(fromRaw, userPhone);
 
   // Extraer URL del adjunto: estructura [{ type, payload: { name, url, size } }]
-  //const attachmentUrl = attachments.length > 0
-    //? attachments[0]?.payload?.url ?? null
-    //: null;
+  const attachmentUrl = attachments.length > 0
+  ? attachments[0]?.payload?.url ?? null
+  : null;
 
   //const attachmentUrl = "https://obelisco.com.ve/upload/30313023_03-06-2026_1118831.png";
   console.log("phoneNumber normalizado:", phoneNumber);
