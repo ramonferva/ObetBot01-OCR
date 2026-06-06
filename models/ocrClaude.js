@@ -26,9 +26,8 @@ TRANSFERENCIA:
 - monto: solo números y punto decimal (ej: 45925.34)
 - fecha: DD/MM/YYYY sin hora
 - referencia: número de referencia completo
-- cuenta: número de cuenta destino completo o últimos dígitos
+- cuenta: número de cuenta destino completo o últimos 4 dígitos
 - documento: cédula del titular si aparece, si no null
-- beneficiario: nombre del beneficiario si aparece, si no null
 
 PAGO MÓVIL:
 - tipo: "pago_movil"
@@ -62,9 +61,8 @@ Transferencia:
   "fecha": "28/05/2026",
   "referencia": "61485551518",
   "cuenta": "0105-0079-64-1079599622",
-  "telefono": null,
-  "documento": null,
-  "beneficiario": "ADMINST OBELISCO CA"
+  "documento": "V12345678",
+  "beneficiario": null  
 }
 
 Pago Móvil:

@@ -12,9 +12,9 @@ const PROVIDER = process.env.OCR_PROVIDER || 'claude';
 
 // Campos requeridos según tipo de comprobante
 const CAMPOS_REQUERIDOS = {
-  transferencia: ['banco', 'monto', 'fecha', 'referencia', 'cuenta'],
-  pago_movil:    ['banco', 'monto', 'fecha', 'referencia', 'telefono'],
-  deposito:      ['monto', 'fecha', 'referencia', 'cuenta'],
+  transferencia: ['banco', 'monto', 'fecha', 'documento', 'cuenta'],
+  pago_movil:    ['banco', 'monto', 'fecha', 'docuemento', 'telefono'],
+  deposito:      ['monto', 'fecha', 'documento', 'cuenta'],
 };
 
 const procesarComprobante = async (imageUrl) => {
@@ -22,7 +22,7 @@ const procesarComprobante = async (imageUrl) => {
     return {
       exito: false,
       datos: null,
-      camposFaltantes: ['monto', 'fecha', 'referencia', 'cuenta'],
+      camposFaltantes: ['monto', 'fecha', 'documento', 'cuenta'],
       completo: false,
       error: 'No se recibió URL de imagen',
     };

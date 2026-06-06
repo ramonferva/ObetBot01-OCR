@@ -274,6 +274,8 @@ const messageInfo = async (req, res) => {
           "😕 No pude leer el comprobante. Voy a pedirte los datos uno a uno."
         );
         const tipoIntent = ocr.tipo === 'deposito' ? 'deposito' : 'transferencia';
+        tipoIntent = tipoIntent +ocr.banco+ "a la "+ocr.cuenta+"  con"+ ocr.referencia + " en " + ocr.fecha + " por " + ocr.monto + " realizada por " + ocr.documento;
+        console.log("tipoIntent generado para Dialogflow:", tipoIntent);
         const resp = await Dialogflow.dialogflowProccess(tipoIntent, phoneNumber, messageId);
         await intentVery.verifyIntent(phoneNumber, resp, messageId, tipoIntent, res, null);
         return;
