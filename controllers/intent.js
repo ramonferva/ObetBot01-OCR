@@ -12,8 +12,8 @@ const limpiarSesionRedis = async (phone) => {
   try {
     const redisClient = await Redis();
     const claves = [
-      `ocr:pendiente:${phone}`,       // datos comprobante esperando confirmación
-      `webhook:procesado:${phone}`,   // deduplicación general
+      `ocr:pendiente:${phone}`, // datos comprobante esperando confirmación
+      `webhook:procesado:${phone}`, // deduplicación general
     ];
     // Buscar y eliminar también cualquier webhook procesado relacionado
     const keysWebhook = await redisClient.keys(`webhook:procesado:*`);
@@ -27,7 +27,14 @@ const limpiarSesionRedis = async (phone) => {
   }
 };
 
-const verifyIntent = async (phone, response, messageId, message, res, attachmentUrl = null) => {
+const verifyIntent = async (
+  phone,
+  response,
+  messageId,
+  message,
+  res,
+  attachmentUrl = null,
+) => {
   const formatPhone = phone.substring(10);
   let val = 0;
   let texto = null;
@@ -57,7 +64,11 @@ const verifyIntent = async (phone, response, messageId, message, res, attachment
               messageId,
             );
             Twilio.sendTextMessageWhatsapp(phone, resp.text);
-            resp = await Dialogflow.dialogflowProccess("menu", phone, messageId);
+            resp = await Dialogflow.dialogflowProccess(
+              "menu",
+              phone,
+              messageId,
+            );
             await sendDialogTwilio(phone, resp, messageId, message);
           } else {
             texto = "No existe el nro telefono en base de datos";
@@ -78,7 +89,6 @@ const verifyIntent = async (phone, response, messageId, message, res, attachment
         });
 
       console.log("resultado input.welcome:", resultado);
-
     } else if (intent === "input.cliente") {
       await api
         .getCodigo(message)
@@ -91,7 +101,9 @@ const verifyIntent = async (phone, response, messageId, message, res, attachment
 
               // Si hay imagen pendiente en Redis, ir al OCR en vez del menú
               if (attachmentUrl) {
-                console.log("input.cliente: cliente identificado con imagen pendiente → OCR");
+                console.log(
+                  "input.cliente: cliente identificado con imagen pendiente → OCR",
+                );
                 // Retornar status 1 para que messages.js procese el OCR
                 val = 1;
               } else {
@@ -126,9 +138,12 @@ const verifyIntent = async (phone, response, messageId, message, res, attachment
           Twilio.sendTextMessageWhatsapp(phone, texto);
           console.error("Error en getCodigo:", error);
         });
-
     } else if (intent === "input.transferencia") {
-      if (!outputContexts || !outputContexts[0] || !outputContexts[0].parameters) {
+      if (
+        !outputContexts ||
+        !outputContexts[0] ||
+        !outputContexts[0].parameters
+      ) {
         console.error("outputContexts inválido para input.transferencia");
         val = 1;
       } else {
@@ -153,7 +168,7 @@ const verifyIntent = async (phone, response, messageId, message, res, attachment
             const resumenParcial = OCR.formatearResumen(ocr.datos);
             const faltantes = OCR.mensajeCamposFaltantes(
               ocr.camposFaltantes,
-              ocr.datos?.tipo
+              ocr.datos?.tipo,
             );
             await Twilio.sendTextMessageWhatsapp(phone, resumenParcial);
             await Twilio.sendTextMessageWhatsapp(phone, faltantes);
@@ -162,7 +177,7 @@ const verifyIntent = async (phone, response, messageId, message, res, attachment
             // OCR falló completamente — pedir datos manualmente
             await Twilio.sendTextMessageWhatsapp(
               phone,
-              'No pude leer el comprobante 😕 Por favor envíame los datos manualmente.'
+              "No pude leer el comprobante 😕 Por favor envíame los datos manualmente.",
             );
             val = 1;
           }
@@ -199,9 +214,89 @@ const verifyIntent = async (phone, response, messageId, message, res, attachment
           val = 1;
         }
       }
+    } else if (intent === "input.transferenciaocr") {
+      if (
+        !outputContexts ||
+        !outputContexts[0] ||
+        !outputContexts[0].parameters
+      ) {
+        console.error("outputContexts inválido para input.transferencia");
+        val = 1;
+      } else {
+        const context = outputContexts[0].parameters.fields;
+        console.log("input.transferenciaOCR", JSON.stringify(context));
+        console.log("input.transferencia attachmentUrl:", attachmentUrl);
 
+        /* // Si el cliente envió una imagen de comprobante, procesarla con OCR
+        if (attachmentUrl) {
+          const ocr = await OCR.procesarComprobante(attachmentUrl);
+          console.log("OCR resultado:", ocr);
+
+          if (ocr.exito && ocr.completo) {
+            // Todos los datos requeridos leídos — mostrar resumen para confirmar
+            const resumen = OCR.formatearResumen(ocr.datos);
+            await Twilio.sendTextMessageWhatsapp(phone, resumen);
+            // Guardar datos OCR en contexto para usarlos en input.transferencia.yes
+            // si el cliente responde SI
+            val = 1;
+          } else if (ocr.exito && !ocr.completo) {
+            // Lectura parcial — mostrar lo que se leyó y pedir los faltantes
+            const resumenParcial = OCR.formatearResumen(ocr.datos);
+            const faltantes = OCR.mensajeCamposFaltantes(
+              ocr.camposFaltantes,
+              ocr.datos?.tipo,
+            );
+            await Twilio.sendTextMessageWhatsapp(phone, resumenParcial);
+            await Twilio.sendTextMessageWhatsapp(phone, faltantes);
+            val = 1;
+          } else {
+            // OCR falló completamente — pedir datos manualmente
+            await Twilio.sendTextMessageWhatsapp(
+              phone,
+              "No pude leer el comprobante 😕 Por favor envíame los datos manualmente.",
+            );
+            val = 1;
+          }
+        }  */
+        if (allRequiredParamsPresent) {
+          // Sin imagen — flujo normal con datos del contexto Dialogflow
+          const fechaCreada = new Date(context.fecha.stringValue);
+          const fechaFormateada = fechaCreada.toLocaleDateString("es-VE", {
+            timeZone: "UTC",
+          });
+
+          const transferencia = {
+            codigo: context.codigo.numberValue,
+            cuenta: context.cuenta.numberValue,
+            fecha: fechaFormateada,
+            documento: context.documento.numberValue,
+            monto: context.monto.numberValue,
+            banco: context.banco.stringValue,
+          };
+
+          const mensaje = {
+            1: `${transferencia.banco}`,
+            2: `${transferencia.cuenta}`,
+            3: `${transferencia.documento}`,
+            4: `${transferencia.monto}`,
+            5: `${transferencia.fecha}`,
+          };
+          Twilio.sendTextMessageWhatsappSidMsg(
+            phone,
+            mensaje,
+            "HXaa20dad1324b8acf3b382e771235a7b9",
+          );
+        } else {
+          texto = null;
+          val = 1;
+        }
+      }
     } else if (intent === "input.deposito") {
-      if (!outputContexts || !outputContexts[0] || !outputContexts[0].parameters) {
+      if (
+        !outputContexts ||
+        !outputContexts[0] ||
+        !outputContexts[0].parameters
+      ) {
         console.error("outputContexts inválido para input.deposito");
         val = 1;
       } else {
@@ -238,7 +333,6 @@ const verifyIntent = async (phone, response, messageId, message, res, attachment
           val = 1;
         }
       }
-
     } else if (intent === "input.transferencia.yes") {
       Twilio.sendTextMessageWhatsapp(phone, response.text);
 
@@ -253,13 +347,13 @@ const verifyIntent = async (phone, response, messageId, message, res, attachment
             const { datos } = JSON.parse(ocrPendiente);
             console.log("input.transferencia.yes → usando datos OCR:", datos);
             transferencia = JSON.stringify({
-              codigo:      null,
-              cuenta:      datos.cuenta     || null,
-              fecha:       datos.fecha      || null,
-              documento:   datos.documento  || null,
-              monto:       datos.monto      || null,
-              banco:       datos.banco      || null,
-              telefono:    datos.telefono   || null,
+              codigo: null,
+              cuenta: datos.cuenta || null,
+              fecha: datos.fecha || null,
+              documento: datos.documento || null,
+              monto: datos.monto || null,
+              banco: datos.banco || null,
+              telefono: datos.telefono || null,
               comprobante: attachmentUrl,
             });
             await redisClient.del(`ocr:pendiente:${phone}`);
@@ -270,8 +364,14 @@ const verifyIntent = async (phone, response, messageId, message, res, attachment
 
         // Prioridad 2: contexto de Dialogflow (flujo manual)
         if (!transferencia) {
-          if (!outputContexts || !outputContexts[0] || !outputContexts[0].parameters) {
-            console.error("outputContexts inválido para input.transferencia.yes");
+          if (
+            !outputContexts ||
+            !outputContexts[0] ||
+            !outputContexts[0].parameters
+          ) {
+            console.error(
+              "outputContexts inválido para input.transferencia.yes",
+            );
             val = 3;
           } else {
             const context = outputContexts[0].parameters.fields;
@@ -279,12 +379,12 @@ const verifyIntent = async (phone, response, messageId, message, res, attachment
             if (allRequiredParamsPresent) {
               const fechaCreada = new Date(context.fecha.stringValue);
               transferencia = JSON.stringify({
-                codigo:      context.codigo?.numberValue  || null,
-                cuenta:      context.cuenta.numberValue,
-                fecha:       fechaCreada,
-                documento:   context.documento.numberValue,
-                monto:       context.monto.numberValue,
-                banco:       context.banco.stringValue,
+                codigo: context.codigo?.numberValue || null,
+                cuenta: context.cuenta.numberValue,
+                fecha: fechaCreada,
+                documento: context.documento.numberValue,
+                monto: context.monto.numberValue,
+                banco: context.banco.stringValue,
                 comprobante: attachmentUrl,
               });
             }
@@ -301,36 +401,51 @@ const verifyIntent = async (phone, response, messageId, message, res, attachment
           texto = text;
           if (result) {
             sendKommunicate(texto, res);
-            const resp = await Dialogflow.dialogflowProccess("cerrar", phone, messageId);
+            const resp = await Dialogflow.dialogflowProccess(
+              "cerrar",
+              phone,
+              messageId,
+            );
             await sendDialogTwilio(phone, resp, messageId, message);
           } else {
-            texto = "Hubo un error en la notificación de la transferencia, no se pudo procesar";
+            texto =
+              "Hubo un error en la notificación de la transferencia, no se pudo procesar";
             sendKommunicate(texto, res);
             val = 3;
           }
         }
-
       } catch (error) {
-        texto = "hubo un error en la notificación, le pondremos en contacto con un agente";
+        texto =
+          "hubo un error en la notificación, le pondremos en contacto con un agente";
         Twilio.sendTextMessageWhatsapp(phone, texto);
         val = 3;
         console.error("Error en input.transferencia.yes:", error);
       }
-
     } else if (intent === "input.transferencia.no") {
-      if (!outputContexts || !outputContexts[0] || !outputContexts[0].parameters) {
+      if (
+        !outputContexts ||
+        !outputContexts[0] ||
+        !outputContexts[0].parameters
+      ) {
         console.error("outputContexts inválido para input.transferencia.no");
         val = 1;
       } else {
         const context = outputContexts[0].parameters.fields;
         console.log("input.transferencia.no", JSON.stringify(context));
         Twilio.sendTextMessageWhatsapp(phone, response.text);
-        const resp = await Dialogflow.dialogflowProccess("menu", phone, messageId);
+        const resp = await Dialogflow.dialogflowProccess(
+          "menu",
+          phone,
+          messageId,
+        );
         await sendDialogTwilio(phone, resp, messageId, message);
       }
-
     } else if (intent === "input.deposito.yes") {
-      if (!outputContexts || !outputContexts[0] || !outputContexts[0].parameters) {
+      if (
+        !outputContexts ||
+        !outputContexts[0] ||
+        !outputContexts[0].parameters
+      ) {
         console.error("outputContexts inválido para input.deposito.yes");
         val = 3;
       } else {
@@ -379,21 +494,31 @@ const verifyIntent = async (phone, response, messageId, message, res, attachment
           console.error("Error en input.deposito.yes:", error);
         }
       }
-
     } else if (intent === "input.deposito.no") {
-      if (!outputContexts || !outputContexts[0] || !outputContexts[0].parameters) {
+      if (
+        !outputContexts ||
+        !outputContexts[0] ||
+        !outputContexts[0].parameters
+      ) {
         console.error("outputContexts inválido para input.deposito.no");
         val = 1;
       } else {
         const context = outputContexts[0].parameters.fields;
         console.log("input.deposito.no", JSON.stringify(context));
         Twilio.sendTextMessageWhatsapp(phone, response.text);
-        const resp = await Dialogflow.dialogflowProccess("menu", phone, messageId);
+        const resp = await Dialogflow.dialogflowProccess(
+          "menu",
+          phone,
+          messageId,
+        );
         await sendDialogTwilio(phone, resp, messageId, message);
       }
-
     } else if (intent === "input.cerrar.yes") {
-      if (!outputContexts || !outputContexts[0] || !outputContexts[0].parameters) {
+      if (
+        !outputContexts ||
+        !outputContexts[0] ||
+        !outputContexts[0].parameters
+      ) {
         console.error("outputContexts inválido para input.cerrar.yes");
       } else {
         const context = outputContexts[0].parameters.fields;
@@ -403,27 +528,36 @@ const verifyIntent = async (phone, response, messageId, message, res, attachment
       await limpiarSesionRedis(phone);
       texto = "Cerrando Conversación";
       val = 4;
-
     } else if (intent === "input.cerrar.no") {
-      if (!outputContexts || !outputContexts[0] || !outputContexts[0].parameters) {
+      if (
+        !outputContexts ||
+        !outputContexts[0] ||
+        !outputContexts[0].parameters
+      ) {
         console.error("outputContexts inválido para input.cerrar.no");
         val = 1;
       } else {
         const context = outputContexts[0].parameters.fields;
         console.log("input.cerrar.no", JSON.stringify(context));
-        const resp = await Dialogflow.dialogflowProccess("menu", phone, messageId);
+        const resp = await Dialogflow.dialogflowProccess(
+          "menu",
+          phone,
+          messageId,
+        );
         await sendDialogTwilio(phone, resp, messageId, message);
       }
-
     } else if (intent === "input.unknown") {
       if (outputContexts && outputContexts[0] && outputContexts[0].parameters) {
         const context = outputContexts[0].parameters.fields;
         console.log("input.unknown", JSON.stringify(context));
       }
       val = 3;
-
     } else if (intent === "input.recibo") {
-      if (!outputContexts || !outputContexts[0] || !outputContexts[0].parameters) {
+      if (
+        !outputContexts ||
+        !outputContexts[0] ||
+        !outputContexts[0].parameters
+      ) {
         console.error("outputContexts inválido para input.recibo");
         val = 1;
       } else {
@@ -450,9 +584,12 @@ const verifyIntent = async (phone, response, messageId, message, res, attachment
           val = 1;
         }
       }
-
     } else if (intent === "input.recibo.yes") {
-      if (!outputContexts || !outputContexts[0] || !outputContexts[0].parameters) {
+      if (
+        !outputContexts ||
+        !outputContexts[0] ||
+        !outputContexts[0].parameters
+      ) {
         console.error("outputContexts inválido para input.recibo.yes");
         val = 1;
       } else {
@@ -487,13 +624,11 @@ const verifyIntent = async (phone, response, messageId, message, res, attachment
           val = 1;
         }
       }
-
     } else {
       val = 1;
     }
 
     return { status: val, message: texto };
-
   } catch (error) {
     // BUG CORREGIDO: antes el catch no retornaba nada → verifyIntent devolvía undefined
     // y en messages.js `result.status` crasheaba con "Cannot read properties of undefined"
@@ -502,7 +637,12 @@ const verifyIntent = async (phone, response, messageId, message, res, attachment
   }
 };
 
-const sendDialogTwilio = async (phoneNumber, response, messageId, messageText) => {
+const sendDialogTwilio = async (
+  phoneNumber,
+  response,
+  messageId,
+  messageText,
+) => {
   try {
     if (response.action) {
       console.log("sendDialogTwilio: tiene action, re-procesando intent");
@@ -529,11 +669,14 @@ const sendSaludo = async (phoneNumber) => {
     let h = new Date().getHours();
     let msg = "";
     if (h >= 0 && h < 12) {
-      msg = "¡Buenos días! Soy OBi, tu agente virtual. Gracias por contactarnos, Administradora Obelisco 100% online 😉.";
+      msg =
+        "¡Buenos días! Soy OBi, tu agente virtual. Gracias por contactarnos, Administradora Obelisco 100% online 😉.";
     } else if (h >= 12 && h < 18) {
-      msg = "¡Buenas tardes! Soy OBi, tu agente virtual. Gracias por contactarnos, Administradora Obelisco 100% online 😉.";
+      msg =
+        "¡Buenas tardes! Soy OBi, tu agente virtual. Gracias por contactarnos, Administradora Obelisco 100% online 😉.";
     } else {
-      msg = "¡Buenas noches! Soy OBi, tu agente virtual. Gracias por contactarnos, Administradora Obelisco 100% online 😉.";
+      msg =
+        "¡Buenas noches! Soy OBi, tu agente virtual. Gracias por contactarnos, Administradora Obelisco 100% online 😉.";
     }
     await Twilio.sendTextMessageWhatsapp(phoneNumber, msg);
   } catch (error) {
