@@ -26,7 +26,7 @@ TRANSFERENCIA:
 - monto: solo números y punto decimal (ej: 45925.34)
 - fecha: DD/MM/YYYY sin hora
 - referencia: número de referencia completo
-- cuenta: número de cuenta destino completo o últimos 4 dígitos
+- cuenta: número de cuenta destino completo los últimos 4 dígitos
 - documento: cédula del titular si aparece, si no null
 
 PAGO MÓVIL:
@@ -198,7 +198,7 @@ const extractWithClaude = async (fileUrl) => {
     },
     timeout: 30000,
   });
-  console.log("Claude OCR → RESPONSE:", response);  
+  //console.log("Claude OCR → RESPONSE:", response);  
   const rawText = response.data.content[0].text.trim();
   console.log("Claude OCR → respuesta raw:", rawText);
 

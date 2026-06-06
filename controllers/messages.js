@@ -213,7 +213,7 @@ const messageInfo = async (req, res) => {
     //? attachments[0]?.payload?.url ?? null
     //: null;
 
-  const attachmentUrl = "https://obelisco.com.ve/upload/30313023_03-06-2026_1118831.png";
+  //const attachmentUrl = "https://obelisco.com.ve/upload/30313023_03-06-2026_1118831.png";
   console.log("phoneNumber normalizado:", phoneNumber);
   console.log("attachmentUrl:", attachmentUrl);
 
@@ -267,8 +267,16 @@ const messageInfo = async (req, res) => {
 
       const ocr = await OCR.procesarComprobante(attachmentUrlFinal);
       console.log("OCR resultado:", ocr);
+      
 
-      if (!ocr.exito) {
+      if (ocr.exito) {
+        const tipoIntent = ocr.tipo === 'deposito' ? 'deposito' : 'transferencia';
+        tipoIntent = tipoIntent +ocr.banco+ "a la "+ocr.cuenta+"  con"+ ocr.referencia + " en " + ocr.fecha + " por " + ocr.monto + " realizada por " + ocr.documento;
+        console.log("tipoIntent generado para Dialogflow:", tipoIntent);
+        const resp = await Dialogflow.dialogflowProccess(tipoIntent, phoneNumber, messageId);
+        await intentVery.verifyIntent(phoneNumber, resp, messageId, tipoIntent, res, null);
+        return;
+      }else{
         await Twilio.sendTextMessageWhatsapp(
           phoneNumber,
           "😕 No pude leer el comprobante. Voy a pedirte los datos uno a uno."
@@ -276,19 +284,18 @@ const messageInfo = async (req, res) => {
         const tipoIntent = ocr.tipo === 'deposito' ? 'deposito' : 'transferencia';
         tipoIntent = tipoIntent +ocr.banco+ "a la "+ocr.cuenta+"  con"+ ocr.referencia + " en " + ocr.fecha + " por " + ocr.monto + " realizada por " + ocr.documento;
         console.log("tipoIntent generado para Dialogflow:", tipoIntent);
-        const resp = await Dialogflow.dialogflowProccess(tipoIntent, phoneNumber, messageId);
-        await intentVery.verifyIntent(phoneNumber, resp, messageId, tipoIntent, res, null);
-        return;
+       
+        
       }
 
-      if (!ocr.completo) {
+      /* if (!ocr.completo) {
         await Twilio.sendTextMessageWhatsapp(phoneNumber, OCR.formatearResumen(ocr.datos));
         await Twilio.sendTextMessageWhatsapp(
           phoneNumber,
           OCR.mensajeCamposFaltantes(ocr.camposFaltantes, ocr.tipo)
         );
         return;
-      }
+      } */
 
       // Datos completos — mostrar resumen y guardar en Redis para confirmación
       await Twilio.sendTextMessageWhatsapp(phoneNumber, OCR.formatearResumen(ocr.datos));
