@@ -524,6 +524,7 @@ const sendDialogTwilio = async (phoneNumber, response, messageId, messageText) =
 };
 
 const sendSaludo = async (phoneNumber) => {
+  console.log("Enviando saludo a", phoneNumber);
   try {
     let h = new Date().getHours();
     let msg = "";

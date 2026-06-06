@@ -8,11 +8,11 @@ const { v4: uuidv4 } = require("uuid");
 require('dotenv').config();
 
 const project_id   = process.env.project_id
-const private_key    = process.env.private_key
+const private_key    = process.env.private_key.replace(/\\n/g, '\n')
 const client_email    = process.env.client_email
 
 
-/* const getDialogflowCredentials = () => {
+ /* const getDialogflowCredentials = () => {
   if (!fs.existsSync(DIALOGFLOW_ACCOUNT_PATH)) return null;
   const credentials = fs.readFileSync(DIALOGFLOW_ACCOUNT_PATH);
   if (!credentials) return null;
@@ -20,7 +20,7 @@ const client_email    = process.env.client_email
   const parseCredentials = JSON.parse(credentials);
 
   return parseCredentials;
-}; */
+};  */
 
 const formatedObject = (obj) => {
   for (let item in obj) {
@@ -47,7 +47,9 @@ const dialogflowProccess = async (message, phoneNumber, messageId) => {
         client_email,
       },
     };
+    //console.log("DialogFlow configuration -> ", configuration);
     const sessionClient = new dialogflow.SessionsClient(configuration);
+    //console.log("SessionClient -> ", sessionClient);
     const sessionPath = sessionClient.projectAgentSessionPath(
       project_id,
       sessionId
