@@ -54,36 +54,50 @@ const dialogflowProccess = async (message, phoneNumber, messageId, contextoPerso
       project_id,
       sessionId
     );
-    // 1. Estructura base del Request
+    // 1. Inicializamos la estructura base de la petición
     const requestPayload = {
       session: sessionPath,
-      queryInput: {
+      queryParams: {},
+    };
+
+    // 2. EVALUACIÓN DE INYECCIÓN DINÁMICA (EVENTO vs TEXTO)
+    if (configuracionDinamica && configuracionDinamica.eventName) {
+      // Si enviamos un evento, forzamos a Dialogflow a activar ese Intent con sus parámetros
+      requestPayload.queryInput = {
+        event: {
+          name: configuracionDinamica.eventName, // Variable dinámica del evento
+          parameters: configuracionDinamica.parameters || {},
+          languageCode: "es",
+        },
+      };
+      console.log(`➔ [Sistema] Disparando por Evento Dinámico: [${configuracionDinamica.eventName}]`);
+    } else {
+      // Si no hay evento, procesamos la conversación normal por texto plano
+      requestPayload.queryInput = {
         text: {
           text: message,
           languageCode: "es",
         },
-      },
-    };
+      };
+    }
 
-    // 2. INYECCIÓN DINÁMICA DE CONTEXTOS
-    // Verifica que se haya enviado el objeto y que contenga un nombre válido
-    if (contextoPersonalizado && contextoPersonalizado.name) {
+    // 3. INYECCIÓN DINÁMICA DEL CONTEXTO
+    // Se ejecuta complementariamente si se define un contextName (útil para persistencia de datos)
+    if (configuracionDinamica && configuracionDinamica.contextName) {
       const contextPath = sessionClient.projectAgentSessionContextPath(
         project_id,
         sessionId,
-        contextoPersonalizado.name // Nombre dinámico recibido por parámetro
+        configuracionDinamica.contextName // Variable dinámica del contexto
       );
 
-      requestPayload.queryParams = {
-        contexts: [
-          {
-            name: contextPath,
-            lifespanCount: 5, // Duración por defecto (5 interacciones)
-            parameters: contextoPersonalizado.parameters || {}, // Parámetros variables
-          },
-        ],
-      };
-      console.log(`➔ [Sistema] Contexto dinámico [${contextoPersonalizado.name}] añadido al payload.`);
+      requestPayload.queryParams.contexts = [
+        {
+          name: contextPath,
+          lifespanCount: 5,
+          parameters: configuracionDinamica.parameters || {},
+        },
+      ];
+      console.log(`➔ [Sistema] Contexto dinámico [${configuracionDinamica.contextName}] añadido al payload.`);
     }
     /*
     const contextKey = `${phoneNumber}:context`;

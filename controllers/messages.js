@@ -272,7 +272,8 @@ const messageInfo = async (req, res) => {
           ocr.tipo === "deposito" ? "deposito" : "transferencia";
 
         const flujoTransferencia = {
-          name: "reportar_transferencia", // Nombre que usará Dialogflow en su consola
+          eventName: 'EVENTO_TRANSFERENCIA_CLAUDE', // Nombre dinámico del evento en Dialogflow
+          contextName: "reportar_transferencia", // Nombre que usará Dialogflow en su consola
           parameters: {
             banco: ocr.banco,
             cuenta: ocr.cuenta,
