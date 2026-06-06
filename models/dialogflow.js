@@ -33,7 +33,7 @@ const formatedObject = (obj) => {
   return obj;
 };
 
-const dialogflowProccess = async (message, phoneNumber, messageId) => {
+const dialogflowProccess = async (message, phoneNumber, messageId, contextoPersonalizado = null) => {
   console.log("dialogflow ----> ", message);
   try {
     //const redis = await Redis();
@@ -54,6 +54,7 @@ const dialogflowProccess = async (message, phoneNumber, messageId) => {
       project_id,
       sessionId
     );
+    // 1. Estructura base del Request
     const requestPayload = {
       session: sessionPath,
       queryInput: {
@@ -63,6 +64,27 @@ const dialogflowProccess = async (message, phoneNumber, messageId) => {
         },
       },
     };
+
+    // 2. INYECCIÓN DINÁMICA DE CONTEXTOS
+    // Verifica que se haya enviado el objeto y que contenga un nombre válido
+    if (contextoPersonalizado && contextoPersonalizado.name) {
+      const contextPath = sessionClient.projectAgentSessionContextPath(
+        project_id,
+        sessionId,
+        contextoPersonalizado.name // Nombre dinámico recibido por parámetro
+      );
+
+      requestPayload.queryParams = {
+        contexts: [
+          {
+            name: contextPath,
+            lifespanCount: 5, // Duración por defecto (5 interacciones)
+            parameters: contextoPersonalizado.parameters || {}, // Parámetros variables
+          },
+        ],
+      };
+      console.log(`➔ [Sistema] Contexto dinámico [${contextoPersonalizado.name}] añadido al payload.`);
+    }
     /*
     const contextKey = `${phoneNumber}:context`;
     const redisContext = await redis.get(contextKey);
