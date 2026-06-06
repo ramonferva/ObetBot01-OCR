@@ -285,7 +285,7 @@ const messageInfo = async (req, res) => {
 
         console.log("tipoIntent generado para Dialogflow:", flujoTransferencia);
         const resp = await Dialogflow.dialogflowProccess(
-          "Procesando Transferencia",
+          "Comprobante recibido exitosamente",
           phoneNumber,
           messageId,
           flujoTransferencia,
